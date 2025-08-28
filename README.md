@@ -1,41 +1,78 @@
-# Connector Hub (FastAPI + SQLite + HMAC + Idempotency)
+# ConnectorHub Extension (v2025.08.28)
 
-- Endpoints:
-  - `GET /ready` – liveness/version
-  - `GET /health` – DB connectivity
-  - `POST /bridge/ingest` – HMAC verify + schema validate + idempotent store
-  - `GET /jobs` – last 24h events (JSON)
+**Purpose**: Add `/hub/execute` broadcast flow + `/events/query` filtering without breaking your existing hub.
+Runs side-by-side on port **8081** by default, or merge routers into the existing app if preferred.
 
-## Quickstart (Docker)
+## What’s new
+- `POST /hub/execute`: Receive events from external agents (n8n, Zapier, Jenspark…)
+- `GET /events/query`: Filter & retrieve stored events (by source, trigger, level, time range)
+- Optional Telegram push + optional forward to "ConnectorGPT" summarizer
+- SQLite WAL store (`/data/connectorhub_events.db`) — zero external deps
 
+## Run (Docker)
 ```bash
-docker build -t connector-hub:latest .
-docker run --rm -it -p 8080:8080 -e CONNECTOR_SECRET=sentinel_20250818_abcd1234 -v $(pwd)/data:/data connector-hub:latest
-# open http://localhost:8080/ready
+docker build -t connectorhub-ext:20250828 .
+docker run --rm -it -p 8081:8081 \  -e CONNECTOR_SECRET=your_token \  -e DB_PATH=/data/connectorhub_events.db \  -e PORT=8081 \  -v $(pwd)/data:/data connectorhub-ext:20250828
+# open http://localhost:8081/ready
 ```
 
-## Railway Variables
-```
-CONNECTOR_SECRET=sentinel_20250818_abcd1234
-DB_PATH=/data/hub.db
-HOST=0.0.0.0
-PORT=8080
-LOG_LEVEL=INFO
+## API
+### POST /hub/execute
+**Headers**
+- `Authorization: Bearer <CONNECTOR_SECRET>`
+- `Content-Type: application/json`
+
+**Body**
+```jsonc
+{
+  "service": "agent" | "mail" | "memory" | "github",
+  "action": "notify" | "read" | "write" | "recall",
+  "params": {
+    "source": "n8n" | "zapier" | "jenspark" | "...",
+    "event": "센티넬 알람",
+    "summary": "ΔK200 -1.8%, Reflex LV2 조건 충족",
+    "trigger": "Reflex",
+    "level": "LV2",
+    "meta": { "any": "json" }
+  }
+}
 ```
 
-## Curl test (domain example)
-```bash
-export HUB=https://fastapi-sentinel-production.up.railway.app
-curl -sS $HUB/ready | jq .
-curl -sS $HUB/health | jq .
-export CONNECTOR_SECRET='sentinel_20250818_abcd1234'
-export BODY='{"idempotency_key":"uuid-1","source":"sentinel","type":"alert.market","priority":"high","timestamp":"2025-08-25T10:44:31.816912","payload":{"rule":"iv_spike","index":"KOSPI200","level":"LV2","metrics":{"dK200":1.6,"dVIX":7.2}}}'
-SIG=$(python - <<'PY'
-import os,hmac,hashlib
-print(hmac.new(os.environ["CONNECTOR_SECRET"].encode(), os.environ["BODY"].encode(), hashlib.sha256).hexdigest())
-PY
-)
-curl -sS -X POST $HUB/bridge/ingest -H "Content-Type: application/json" -H "X-Signature: $SIG" -H "Idempotency-Key: uuid-1" --data "$BODY" | jq .
-curl -sS -X POST $HUB/bridge/ingest -H "Content-Type: application/json" -H "X-Signature: $SIG" -H "Idempotency-Key: uuid-1" --data "$BODY" | jq .
-curl -sS $HUB/jobs | jq .
+**Response**
+```json
+{
+  "ok": true,
+  "id": "evt_20250828_120000_abc123",
+  "stored": true,
+  "broadcast": {"telegram": false, "connector_gpt": false},
+  "ersp": {
+    "event": "...",
+    "interpretation": "...",
+    "lesson": "...",
+    "if_then": "..."
+  }
+}
 ```
+
+### GET /events/query
+Query params: `source, event, trigger, level, since, until, limit=100`
+- Times are ISO8601, default since = now - 24h
+
+### GET /ready
+Liveness/version info.
+
+### GET /health
+DB connectivity.
+
+## Merge into existing hub (optional)
+If you want a single process instead of sidecar:
+```python
+# in your existing FastAPI app factory
+from connectorhub_routers import hub, events_query
+app.include_router(hub.router, prefix="/hub")
+app.include_router(events_query.router, prefix="/events")
+```
+Make sure to set `DB_PATH` to point at your existing data mount.
+
+---
+© FGPT / Caia – ConnectorHub extension 2025-08-28

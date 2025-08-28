@@ -1,0 +1,12 @@
+{
+  "tool_name": "ConnectorHub",
+  "description": "외부 시스템 실행을 Hub를 통해 호출하고, 요약 결과를 Caia에게 전달",
+  "endpoint": "POST /hub/execute",
+  "input_fields": {
+    "service": "string",
+    "action": "string",
+    "params": "object"
+  },
+  "output": "JSON or Markdown 요약",
+  "system_message": "Caia의 요청에 따라 외부 시스템을 호출하고, 응답을 요약해 Caia에게 전달하라."
+}
