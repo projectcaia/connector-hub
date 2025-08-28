@@ -1,0 +1,4 @@
+# main.py 수정 예시
+from app.routers import judge, events
+app.include_router(judge.router)
+app.include_router(events.router)
