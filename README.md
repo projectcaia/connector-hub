@@ -76,3 +76,6 @@ Make sure to set `DB_PATH` to point at your existing data mount.
 
 ---
 © FGPT / Caia – ConnectorHub extension 2025-08-28
+
+
+> 2025.08.28a HOTFIX: Fixed APIRouter import in app.py (no `.router` chaining).
