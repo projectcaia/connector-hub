@@ -91,15 +91,3 @@ def events_recent(limit: int = 3, x_signature: Optional[str] = Header(default=No
 # OPENAI_API_KEY=sk-... (선택)
 # APP_VERSION=2025.08.28
 # ENFORCE_HMAC_READY=true (선택)
-
-
-# === 테스트 커맨드 ===
-# export CONNECTOR_SECRET='sentinel_20250818_abcd1234'
-# export BODY='{"type":"alert.market","source":"sentinel","actor":"system","trace_id":"test-judge-001","timestamp":"2025-08-28T02:10:00Z","payload":{"dK200":-1.7,"VIX":6}}'
-# SIG=$(python - <<'PY'
-# import os,hmac,hashlib
-# print(hmac.new(os.environ["CONNECTOR_SECRET"].encode(), os.environ["BODY"].encode(), hashlib.sha256).hexdigest())
-# PY
-# )
-# curl -s -X POST "https://connector-hub-production.up.railway.app/judge" -H "Content-Type: application/json" -H "X-Signature: $SIG" -H "Idempotency-Key: test-judge-001" -d "$BODY"
-# curl -s "https://connector-hub-production.up.railway.app/events/recent?limit=3" -H "X-Signature: $SIG"
