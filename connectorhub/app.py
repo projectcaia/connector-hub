@@ -9,3 +9,10 @@ app = FastAPI(title="ConnectorHub Extension", version=APP_VERSION)
 app.include_router(health)
 app.include_router(hub, prefix="/hub")
 app.include_router(events_query, prefix="/events")
+
+# Optional: expose core /bridge alongside /hub
+try:
+    from app.routers import bridge as core_bridge
+    app.include_router(core_bridge.router, prefix="/bridge")
+except Exception:
+    pass
