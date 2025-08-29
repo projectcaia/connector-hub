@@ -4,7 +4,7 @@ from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 
-from services.auth import require_bearer
+from services.auth import require_auth
 from services.store import Store
 from services.notify import TelegramNotifier
 from services.forward import ConnectorGPTForwarder
@@ -26,8 +26,14 @@ class ExecuteBody(BaseModel):
     params: ExecuteParams
 
 @router.post("/execute")
-async def execute(body: ExecuteBody, request: Request, authorization: str | None = Header(default=None)):
-    require_bearer(authorization)
+async def execute(
+    body: ExecuteBody,
+    request: Request,
+    authorization: str | None = Header(default=None),
+    x_signature: str | None = Header(default=None),
+):
+    raw = await request.body()
+    require_auth(raw, authorization, x_signature)
 
     now = datetime.now(timezone.utc).isoformat()
     store = Store()
