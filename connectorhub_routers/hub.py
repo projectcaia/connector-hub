@@ -1,4 +1,4 @@
-import os
+# connectorhub_routers/hub.py
 from datetime import datetime, timezone
 from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel, Field
@@ -29,9 +29,10 @@ class ExecuteBody(BaseModel):
 async def execute(
     body: ExecuteBody,
     request: Request,
-    authorization: str | None = Header(default=None),
-    x_signature: str | None = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+    x_signature: Optional[str] = Header(default=None),
 ):
+    # HMAC 계산을 위해 원문 바디 확보(Starlette가 캐시해서 안전)
     raw = await request.body()
     require_auth(raw, authorization, x_signature)
 
@@ -65,7 +66,7 @@ async def execute(
         if notifier:
             notifier.send_message(
                 title=f"[에이전트 알림] {row['source']}",
-                message=f"{row['event']} – {row.get('summary') or ''} (트리거: {row.get('trigger')}, 레벨: {row.get('level')})"
+                message=f"{row['event']} – {row.get('summary') or ''} (트리거: {row.get('trigger')}, 레벨: {row.get('level')})",
             )
             broadcast["telegram"] = True
     except Exception:
