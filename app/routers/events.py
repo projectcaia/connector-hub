@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Header, HTTPException
-from typing import Optional
-from app.storage import recent_jobs
 
-router = APIRouter()
+from __future__ import annotations
+from fastapi import APIRouter, Header, Query
+from ..deps import list_events
+from .security import verify_bearer
 
-@router.get("/events/recent")
-def events_recent(limit: int = 3, x_signature: Optional[str] = Header(default=None, convert_underscores=True)):
-    if not x_signature:
-        raise HTTPException(status_code=401, detail="Missing signature")
-    items = recent_jobs(limit=limit)
-    return {"items": items}
+router = APIRouter(prefix="/events", tags=["events"])
+
+@router.get("/query")
+async def query_events(limit: int = Query(10, ge=1, le=100), authorization: str = Header(...)):
+    verify_bearer(authorization)
+    return {"ok": True, "items": list_events(limit)}

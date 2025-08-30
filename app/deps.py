@@ -1,5 +1,5 @@
 
-import os, sqlite3
+import os, sqlite3, json
 from contextlib import contextmanager
 
 def _load_patch():
@@ -37,7 +37,6 @@ def get_db():
         conn.close()
 
 def record_event(service: str, action: str, params: dict, job_id: str | None = None) -> int:
-    import json
     payload = json.dumps(params, ensure_ascii=False)
     with get_db() as db:
         cur = db.cursor()
@@ -46,3 +45,26 @@ def record_event(service: str, action: str, params: dict, job_id: str | None = N
             (service, action, payload, job_id),
         )
         return cur.lastrowid
+
+def list_events(limit: int = 10):
+    with get_db() as db:
+        cur = db.execute(
+            "SELECT id, service, action, params, job_id, created_at FROM events ORDER BY id DESC LIMIT ?",
+            (limit,),
+        )
+        rows = cur.fetchall()
+        out = []
+        for r in rows:
+            try:
+                p = json.loads(r["params"] or "{}")
+            except Exception:
+                p = {"_raw": r["params"]}
+            out.append({
+                "id": r["id"],
+                "service": r["service"],
+                "action": r["action"],
+                "params": p,
+                "job_id": r["job_id"],
+                "created_at": r["created_at"],
+            })
+        return out

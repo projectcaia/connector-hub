@@ -12,23 +12,11 @@ TABLES = {
         ("params", "TEXT"),
         ("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
         ("job_id", "TEXT")
-    ],
-    "jobs": [
-        ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
-        ("idempotency_key", "TEXT"),
-        ("source", "TEXT"),
-        ("type", "TEXT"),
-        ("priority", "TEXT"),
-        ("timestamp", "TEXT"),
-        ("payload", "TEXT"),
-        ("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     ]
 }
 
 INDEXES = [
-    ("jobs", "idx_jobs_idempotency", "UNIQUE(idempotency_key)"),
-    ("jobs", "idx_jobs_created_at", "created_at"),
-    ("events", "idx_events_created_at", "created_at"),
+    ("events", "idx_events_created_at", "created_at")
 ]
 
 def _create_table_if_missing(cur, table, columns):

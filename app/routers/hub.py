@@ -1,6 +1,6 @@
 
 from __future__ import annotations
-from fastapi import APIRouter, Header, Request
+from fastapi import APIRouter, Header
 from ..models import HubExecuteRequest, HubExecuteResponse
 from ..deps import record_event
 from .security import verify_bearer
