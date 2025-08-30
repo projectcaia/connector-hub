@@ -1,8 +1,11 @@
+
 from fastapi import FastAPI
-from app.routers import health, bridge, jobs
+from .routers import hub, bridge
 
-app = FastAPI(title="Connector Hub", version="2025.08.25")
+app = FastAPI(title="ConnectorHub (Clean)")
+app.include_router(hub.router)
+app.include_router(bridge.router)
 
-app.include_router(health.router)
-app.include_router(bridge.router, prefix="/bridge")
-app.include_router(jobs.router)
+@app.get("/health")
+def health():
+    return {"ok": True}

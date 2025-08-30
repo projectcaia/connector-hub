@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 from .deps import get_db, ensure_schema
 
-# ensure schema (jobs/events) — idempotent
+# second guard (idempotent)
 ensure_schema(None)
 
 def find_job_by_idemp(idemp: str) -> Optional[dict]:
