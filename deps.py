@@ -1,35 +1,34 @@
 
 """
-ConnectorHub deps.py (patched)
-- Ensures SQLite schema on import (fixes missing 'job_id' in events table).
-- Exposes get_db() and record_event() helpers.
+deps.py (layout-safe, auto schema ensure)
+- Works in both project root and /app layouts.
+- On import, ensures SQLite schema (adds events.job_id if missing).
 Env:
-  DB_PATH=/tmp/hub.db (default)  # recommend /data/hub.db in prod
+  DB_PATH=/data/hub.db (default if unset)
 """
-import os
-import json
-import sqlite3
+import os, sqlite3
 from contextlib import contextmanager
-from typing import Optional, Dict, Any
 
-# --- Config ---
-DB_PATH = os.getenv("DB_PATH", "/tmp/hub.db")
+# Import ensure_schema from colocated connectorhub_db_patch
+def _load_patch():
+    try:
+        from connectorhub_db_patch import ensure_schema  # type: ignore
+        return ensure_schema
+    except Exception:
+        # Attempt relative load for odd loaders
+        import importlib.util, sys
+        base = os.path.dirname(__file__)
+        patch_path = os.path.join(base, "connectorhub_db_patch.py")
+        spec = importlib.util.spec_from_file_location("connectorhub_db_patch", patch_path)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["connectorhub_db_patch"] = mod
+        spec.loader.exec_module(mod)  # type: ignore
+        return mod.ensure_schema  # type: ignore
 
-# --- Schema ensure (on import) ---
-try:
-    from connectorhub_db_patch import ensure_schema
-except Exception as e:  # fallback if relative import
-    # local fallback import if module path differs
-    import importlib.util, sys, types
-    spec = importlib.util.spec_from_file_location("connectorhub_db_patch", os.path.join(os.path.dirname(__file__), "connectorhub_db_patch.py"))
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["connectorhub_db_patch"] = mod
-    spec.loader.exec_module(mod)  # type: ignore
-    ensure_schema = mod.ensure_schema  # type: ignore
-
+ensure_schema = _load_patch()
+DB_PATH = os.getenv("DB_PATH", "/data/hub.db")
 DB_PATH = ensure_schema(DB_PATH)
 
-# --- SQLite helpers ---
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -46,8 +45,8 @@ def get_db():
     finally:
         conn.close()
 
-# --- Domain helpers ---
-def record_event(service: str, action: str, params: Dict[str, Any], job_id: Optional[str] = None) -> int:
+def record_event(service: str, action: str, params: dict, job_id: str | None = None) -> int:
+    import json
     payload = json.dumps(params, ensure_ascii=False)
     with get_db() as db:
         cur = db.cursor()
